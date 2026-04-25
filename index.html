@@ -665,6 +665,15 @@
 
                 <div class="video-container" id="videoContainer">
                     <video id="video" autoplay playsinline></video>
+                    <div style="position: absolute; top: 20px; left: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; color: white; font-size: 14px; backdrop-filter: blur(10px);">
+                        <div style="font-weight: 600; margin-bottom: 8px;">📸 拍攝技巧</div>
+                        <div style="font-size: 12px; line-height: 1.5;">
+                            ✓ 光線充足但不反光<br>
+                            ✓ 平鋪藥物不重疊<br>
+                            ✓ 垂直向下拍攝<br>
+                            ✓ 確保全部入鏡
+                        </div>
+                    </div>
                     <div class="camera-controls">
                         <button class="btn-capture" onclick="capturePhoto()">📸 拍攝照片</button>
                         <button class="btn-close-camera" onclick="closeCamera()">✕ 關閉相機</button>
@@ -817,7 +826,7 @@
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0);
             
-            currentImage = canvas.toDataURL('image/jpeg', 0.95);
+            currentImage = canvas.toDataURL('image/jpeg', 0.98);
             imageMetadata = {
                 name: '相機拍攝.jpg',
                 dimensions: `${canvas.width} × ${canvas.height} px`,
@@ -857,8 +866,8 @@
                     },
                     body: JSON.stringify({
                         model: "claude-sonnet-4-20250514",
-                        max_tokens: 2000,
-                        temperature: 0.3,
+                        max_tokens: 3000,
+                        temperature: 0,
                         messages: [
                             {
                                 role: "user",
@@ -873,39 +882,59 @@
                                     },
                                     {
                                         type: "text",
-                                        text: `你是一個專業的藥物計數專家。請極度仔細地分析這張圖片中的所有藥物，並精確計算每一顆的數量。
+                                        text: `你是專業藥物計數專家。你的任務是精確計算圖片中的藥物數量。
 
-**重要要求：**
-1. 仔細掃描整個圖片，不要遺漏任何一顆藥物
-2. 即使藥物數量很多（可能有幾十顆甚至上百顆），也要逐一辨識
-3. 區分不同類型：膠囊、圓形藥錠、橢圓形藥錠、其他形狀
-4. 注意不同顏色、大小的藥物
-5. 如果有重疊，請仔細辨別是否為獨立的藥物
-6. 計算時要非常謹慎，寧可多花時間也要確保準確
+**第一步：仔細觀察整張圖片**
+從左到右、從上到下系統性掃描，不要遺漏任何區域。
 
-**關鍵辨識規則：**
-7. ⚠️ **請務必不要被反光和陰影誤導** - 反光、亮點、陰影都不是藥物，請忽略這些視覺干擾
-8. ⚠️ **部分藥物的計算規則（非常重要）**：
-   - 只要看到藥物的任何部分，不管是半顆、1/3顆、1/4顆，甚至只露出一小角
-   - 統統計算為「1顆完整藥物」
-   - 只要能辨識出是獨立的藥物個體，就必須計入總數
-9. 區分真實的藥物與光影效果：藥物有實體形狀和邊緣，反光只是光點
+**第二步：識別每一顆藥物**
+藥物的特徵：
+- 有明確的邊緣輪廓
+- 通常是圓形、橢圓形或膠囊狀
+- 有實體的立體感
+- 可能有各種顏色（白色、粉色、藍色、黃色等）
 
-**藥物分類標準：**
-- 膠囊：兩端圓弧的長條形
-- 圓形藥錠：圓形或接近圓形的藥片
-- 橢圓形藥錠：橢圓形或卵形的藥片
-- 其他形狀：方形、三角形、特殊形狀等
+**第三步：區分藥物與非藥物**
+❌ 不是藥物的東西：
+- 反光、光斑、高光點
+- 陰影
+- 背景紋理
+- 模糊不清的區域
 
-請以JSON格式回應，不要包含markdown標記：
+✅ 是藥物的標準：
+- 能看到清晰的邊緣
+- 有藥物的形狀特徵
+- 即使只露出一部分也算一顆
+
+**第四步：逐一計數**
+- 從圖片左上角開始
+- 看到一顆就記錄一顆
+- 仔細檢查是否有重疊的藥物
+- 畫面邊緣的部分藥物也要計入
+- 完成後重新檢查一次
+
+**重要提醒：**
+1. 半顆藥物 = 1 顆
+2. 1/3 藥物 = 1 顆  
+3. 1/4 藥物 = 1 顆
+4. 只要能辨識出是藥物，就算 1 顆
+5. 不要被反光誤導，反光不是藥物
+6. 仔細數，寧可慢也要準
+
+**範例說明：**
+- 如果看到 5 顆白色圓形藥錠 + 3 顆粉紅色膠囊 = 總共 8 顆
+- 如果有 1 顆藥物一半在畫面外 = 仍然算 1 顆
+- 如果有 2 顆藥物部分重疊 = 算 2 顆（不是 1 顆）
+
+請以JSON格式回應（不要任何其他文字或符號）：
 {
-  "total_count": 數字,
+  "total_count": 實際數字,
   "categories": [
     {
-      "type": "類型",
+      "type": "藥物類型",
       "icon": "💊",
-      "count": 數字,
-      "description": "描述"
+      "count": 數量,
+      "description": "簡短描述"
     }
   ],
   "confidence": "high"
