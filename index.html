@@ -890,62 +890,44 @@
                                     },
                                     {
                                         type: "text",
-                                        text: `你是專業藥物計數專家。你的任務是精確計算圖片中的藥物數量。
+                                        text: `你是專業藥物計數專家。請精確計算圖片中的藥物數量，並標記每顆藥物的位置。
 
-**第一步：仔細觀察整張圖片**
-從左到右、從上到下系統性掃描，不要遺漏任何區域。
+**計數步驟：**
+1. 從左到右、從上到下系統性掃描整張圖片
+2. 識別每一顆藥物（圓形、橢圓、膠囊狀）
+3. 記錄每顆藥物中心點的位置
+4. 逐一計數，不遺漏任何藥物
 
-**第二步：識別每一顆藥物**
-藥物的特徵：
-- 有明確的邊緣輪廓
-- 通常是圓形、橢圓形或膠囊狀
-- 有實體的立體感
-- 可能有各種顏色（白色、粉色、藍色、黃色等）
+**位置標記說明：**
+- 使用圖片的百分比座標系統
+- x: 0-100 (0=最左邊, 100=最右邊)
+- y: 0-100 (0=最上方, 100=最下方)
+- 例如圖片中央的藥物: x=50, y=50
 
-**第三步：區分藥物與非藥物**
-❌ 不是藥物的東西：
-- 反光、光斑、高光點
-- 陰影
-- 背景紋理
-- 模糊不清的區域
+**藥物識別標準：**
+✅ 是藥物：有清晰邊緣、圓形/橢圓/膠囊形狀、有顏色和立體感
+❌ 不是藥物：反光、光斑、陰影、背景
 
-✅ 是藥物的標準：
-- 能看到清晰的邊緣
-- 有藥物的形狀特徵
-- 即使只露出一部分也算一顆
+**重要規則：**
+- 半顆藥物 = 1顆
+- 部分被遮擋 = 1顆
+- 畫面邊緣的 = 1顆
 
-**第四步：逐一計數**
-- 從圖片左上角開始
-- 看到一顆就記錄一顆
-- 仔細檢查是否有重疊的藥物
-- 畫面邊緣的部分藥物也要計入
-- 完成後重新檢查一次
-
-**重要提醒：**
-1. 半顆藥物 = 1 顆
-2. 1/3 藥物 = 1 顆  
-3. 1/4 藥物 = 1 顆
-4. 只要能辨識出是藥物，就算 1 顆
-5. 不要被反光誤導，反光不是藥物
-6. 仔細數，寧可慢也要準
-
-**範例說明：**
-- 如果看到 5 顆白色圓形藥錠 + 3 顆粉紅色膠囊 = 總共 8 顆
-- 如果有 1 顆藥物一半在畫面外 = 仍然算 1 顆
-- 如果有 2 顆藥物部分重疊 = 算 2 顆（不是 1 顆）
-
-請以JSON格式回應（不要任何其他文字或符號）：
+請以JSON格式回應（不要其他文字）：
 {
-  "total_count": 實際數字,
+  "total_count": 數字,
+  "positions": [
+    {"x": 25.5, "y": 30.2},
+    {"x": 45.0, "y": 50.0},
+    {"x": 65.3, "y": 28.7}
+  ],
   "categories": [
     {
-      "type": "藥物類型",
-      "icon": "💊",
-      "count": 數量,
-      "description": "簡短描述"
+      "type": "圓形藥錠",
+      "count": 5,
+      "description": "白色圓形"
     }
-  ],
-  "confidence": "high"
+  ]
 }`
                                     }
                                 ]
@@ -1022,11 +1004,24 @@
             const categoryGrid = document.getElementById('categoryGrid');
             const analysisNotes = document.getElementById('analysisNotes');
             const resultSection = document.getElementById('resultSection');
+            const previewContainer = document.getElementById('previewContainer');
 
             // 顯示右下角數字徽章
             totalCount.textContent = result.total_count;
             if (totalCountLarge) {
                 totalCountLarge.textContent = result.total_count;
+            }
+
+            // 在圖片上添加綠點標記
+            if (result.positions && result.positions.length > 0) {
+                setTimeout(() => {
+                    const img = previewContainer.querySelector('.preview-image');
+                    if (img && img.complete) {
+                        addPillMarkers(img, result.positions);
+                    } else if (img) {
+                        img.onload = () => addPillMarkers(img, result.positions);
+                    }
+                }, 100);
             }
 
             // 顯示信心度
@@ -1091,6 +1086,39 @@
             setTimeout(() => {
                 resultSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
             }, 300);
+        }
+
+        function addPillMarkers(img, positions) {
+            const previewContainer = document.getElementById('previewContainer');
+            
+            // 清除舊的標記
+            const oldMarkers = previewContainer.querySelectorAll('.pill-marker');
+            oldMarkers.forEach(marker => marker.remove());
+
+            // 獲取圖片實際顯示的尺寸和位置
+            const imgRect = img.getBoundingClientRect();
+            const containerRect = previewContainer.getBoundingClientRect();
+            
+            positions.forEach((pos, index) => {
+                const marker = document.createElement('div');
+                marker.className = 'pill-marker';
+                
+                // 計算標記的絕對位置
+                const markerX = (pos.x / 100) * img.offsetWidth;
+                const markerY = (pos.y / 100) * img.offsetHeight;
+                
+                marker.style.left = (img.offsetLeft + markerX) + 'px';
+                marker.style.top = (img.offsetTop + markerY) + 'px';
+                marker.style.animationDelay = (index * 0.03) + 's';
+                
+                // 添加編號
+                const number = document.createElement('div');
+                number.className = 'pill-number';
+                number.textContent = index + 1;
+                marker.appendChild(number);
+                
+                previewContainer.appendChild(marker);
+            });
         }
 
         function resetApp() {
