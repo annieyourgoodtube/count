@@ -638,17 +638,9 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>💊 | Let's Count~e | ☕</h1>
-            <p class="subtitle">把數藥的瑣碎交給我，把喝咖啡的時間留給自己</p>
-
-            <div class="feature-tags">
-                <span class="tag">✓ 膠囊辨識</span>
-                <span class="tag">✓ 藥錠辨識</span>
-                <span class="tag">✓ 圓形</span>
-                <span class="tag">✓ 橢圓</span>
-                <span class="tag">✓ 非一顆</span>
-            </div>
+        <div class="header" style="padding: 12px 15px; margin-bottom: 10px;">
+            <h1 style="margin-bottom: 5px;">💉 ~ Let's Count~e ~ ☕</h1>
+            <p class="subtitle" style="margin: 0;">智慧辨識針頭顏色，綠色紫色一拍就知</p>
         </div>
 
         <div class="content-area">
@@ -659,19 +651,28 @@
             <div class="camera-area" id="cameraArea">
                 <div class="camera-placeholder" id="cameraPlaceholder">
                     <div class="camera-icon">🔍</div>
-                    <p style="font-size: 24px; color: #1e3c72; font-weight: 600; margin-bottom: 12px; padding: 0 10px; line-height: 1.3;">準備開始辨識藥物</p>
+                    <p style="font-size: 24px; color: #1e3c72; font-weight: 600; margin-bottom: 12px; padding: 0 10px; line-height: 1.3;">準備辨識針頭數量</p>
                     <p style="color: #666; font-size: 16px; padding: 0 15px; line-height: 1.5;">點擊上方按鈕開啟相機</p>
                 </div>
 
                 <div class="video-container" id="videoContainer">
                     <video id="video" autoplay playsinline></video>
-                    <div style="position: absolute; top: 20px; left: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; color: white; font-size: 14px; backdrop-filter: blur(10px);">
-                        <div style="font-weight: 600; margin-bottom: 8px;">📸 拍攝技巧</div>
-                        <div style="font-size: 12px; line-height: 1.5;">
-                            ✓ 光線充足但不反光<br>
-                            ✓ 平鋪藥物不重疊<br>
-                            ✓ 垂直向下拍攝<br>
-                            ✓ 確保全部入鏡
+                    
+                    <!-- 即時計數顯示 -->
+                    <div id="liveCount" style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; pointer-events: none; display: none;">
+                        <div style="background: rgba(0,0,0,0.8); padding: 30px 40px; border-radius: 20px; backdrop-filter: blur(10px);">
+                            <div style="color: #10b981; font-size: 24px; font-weight: 600; margin-bottom: 10px;">🟢 綠色</div>
+                            <div id="greenLiveCount" style="color: white; font-size: 72px; font-weight: bold; margin-bottom: 20px;">0</div>
+                            <div style="color: #9333ea; font-size: 24px; font-weight: 600; margin-bottom: 10px;">🟣 紫色</div>
+                            <div id="purpleLiveCount" style="color: white; font-size: 72px; font-weight: bold;">0</div>
+                        </div>
+                    </div>
+                    
+                    <div style="position: absolute; top: 20px; left: 20px; right: 20px; background: rgba(0,0,0,0.7); padding: 12px; border-radius: 10px; color: white; font-size: 13px; backdrop-filter: blur(10px);">
+                        <div style="font-weight: 600; margin-bottom: 6px;">📸 拍攝技巧</div>
+                        <div style="font-size: 11px; line-height: 1.4;">
+                            ✓ 光線充足清晰可見<br>
+                            ✓ 針頭平鋪整齊排列
                         </div>
                     </div>
                     <div class="camera-controls">
@@ -815,6 +816,8 @@
         }
 
         function closeCamera() {
+            const liveCount = document.getElementById('liveCount');
+            if (liveCount) liveCount.style.display = 'none';
             stopCamera();
         }
 
@@ -841,11 +844,18 @@
                 size: ((currentImage.length * 0.75) / 1024).toFixed(2) + ' KB'
             };
             
-            showPreview();
-            stopCamera();
+            // 顯示即時計數（初始為0）
+            const liveCount = document.getElementById('liveCount');
+            liveCount.style.display = 'block';
             
-            // 自動開始分析
-            setTimeout(() => analyzePills(), 500);
+            showPreview();
+            
+            // 延遲關閉相機，讓使用者看到計數顯示
+            setTimeout(() => {
+                stopCamera();
+                // 開始分析
+                setTimeout(() => analyzePills(), 300);
+            }, 500);
         }
 
         async function analyzePills() {
@@ -890,42 +900,56 @@
                                     },
                                     {
                                         type: "text",
-                                        text: `你是專業藥物計數專家。請精確計算圖片中的藥物數量，並標記每顆藥物的位置。
+                                        text: `你是專業醫療器材辨識專家。請辨識圖片中針筒針頭的顏色並計數。
 
-**計數步驟：**
-1. 從左到右、從上到下系統性掃描整張圖片
-2. 識別每一顆藥物（圓形、橢圓、膠囊狀）
-3. 記錄每顆藥物中心點的位置
-4. 逐一計數，不遺漏任何藥物
+**任務說明：**
+辨識圖片中的針筒針頭，區分綠色和紫色，並分別計數。
 
-**位置標記說明：**
-- 使用圖片的百分比座標系統
-- x: 0-100 (0=最左邊, 100=最右邊)
-- y: 0-100 (0=最上方, 100=最下方)
-- 例如圖片中央的藥物: x=50, y=50
+**針頭特徵：**
+- 綠色針頭：淡綠色或深綠色的針筒頭蓋
+- 紫色針頭：淡紫色或深紫色的針筒頭蓋
+- 針頭通常是圓錐形或圓柱形
+- 可能還有針筒本體（透明部分）
 
-**藥物識別標準：**
-✅ 是藥物：有清晰邊緣、圓形/橢圓/膠囊形狀、有顏色和立體感
-❌ 不是藥物：反光、光斑、陰影、背景
+**辨識重點：**
+1. 專注在針頭的**頭蓋顏色**
+2. 區分綠色 vs 紫色
+3. 計算每種顏色的數量
+4. 標記每個針頭的位置
 
-**重要規則：**
-- 半顆藥物 = 1顆
-- 部分被遮擋 = 1顆
-- 畫面邊緣的 = 1顆
+**忽略的物品：**
+- 針筒的透明筒身
+- 包裝盒或包裝紙
+- 背景物品
+- 標籤文字
+
+**位置標記：**
+- x: 0-100（0=最左，100=最右）
+- y: 0-100（0=最上，100=最下）
+- 標記每個針頭頭蓋的中心位置
+
+**預設規格：**
+- 所有針頭預設為 28G（除非圖片中有其他明確標示）
 
 請以JSON格式回應（不要其他文字）：
 {
-  "total_count": 數字,
+  "total_count": 針頭總數,
+  "green_count": 綠色針頭數量,
+  "purple_count": 紫色針頭數量,
   "positions": [
-    {"x": 25.5, "y": 30.2},
-    {"x": 45.0, "y": 50.0},
-    {"x": 65.3, "y": 28.7}
+    {"x": 25.5, "y": 30.2, "color": "green"},
+    {"x": 45.0, "y": 50.0, "color": "purple"}
   ],
   "categories": [
     {
-      "type": "圓形藥錠",
-      "count": 5,
-      "description": "白色圓形"
+      "type": "綠色針頭 28G",
+      "count": 數量,
+      "description": "淡綠色"
+    },
+    {
+      "type": "紫色針頭 28G",
+      "count": 數量,
+      "description": "淡紫色"
     }
   ]
 }`
@@ -1005,6 +1029,16 @@
             const analysisNotes = document.getElementById('analysisNotes');
             const resultSection = document.getElementById('resultSection');
             const previewContainer = document.getElementById('previewContainer');
+
+            // 更新即時計數顯示（如果存在）
+            const greenLiveCount = document.getElementById('greenLiveCount');
+            const purpleLiveCount = document.getElementById('purpleLiveCount');
+            if (greenLiveCount && result.green_count !== undefined) {
+                greenLiveCount.textContent = result.green_count;
+            }
+            if (purpleLiveCount && result.purple_count !== undefined) {
+                purpleLiveCount.textContent = result.purple_count;
+            }
 
             // 顯示右下角數字徽章
             totalCount.textContent = result.total_count;
@@ -1099,9 +1133,23 @@
             const imgRect = img.getBoundingClientRect();
             const containerRect = previewContainer.getBoundingClientRect();
             
+            let greenCount = 0;
+            let purpleCount = 0;
+            
             positions.forEach((pos, index) => {
                 const marker = document.createElement('div');
                 marker.className = 'pill-marker';
+                
+                // 根據顏色設定不同的標記顏色
+                if (pos.color === 'green') {
+                    greenCount++;
+                    marker.style.background = '#10b981';
+                    marker.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.6), 0 0 0 4px rgba(16, 185, 129, 0.2)';
+                } else if (pos.color === 'purple') {
+                    purpleCount++;
+                    marker.style.background = '#9333ea';
+                    marker.style.boxShadow = '0 2px 8px rgba(147, 51, 234, 0.6), 0 0 0 4px rgba(147, 51, 234, 0.2)';
+                }
                 
                 // 計算標記的絕對位置
                 const markerX = (pos.x / 100) * img.offsetWidth;
@@ -1114,7 +1162,13 @@
                 // 添加編號
                 const number = document.createElement('div');
                 number.className = 'pill-number';
-                number.textContent = index + 1;
+                if (pos.color === 'green') {
+                    number.textContent = '綠' + greenCount;
+                    number.style.background = '#10b981';
+                } else if (pos.color === 'purple') {
+                    number.textContent = '紫' + purpleCount;
+                    number.style.background = '#9333ea';
+                }
                 marker.appendChild(number);
                 
                 previewContainer.appendChild(marker);
