@@ -687,6 +687,7 @@
             
             <div class="action-buttons">
                 <button class="btn-secondary" onclick="resetApp()" style="width: 100%;">📸 重新拍攝</button>
+                <button class="btn-success" onclick="testAnalysis()" style="width: 100%; margin-top: 10px; background: #10b981; color: white; display: none;" id="testAnalysisBtn">🔍 測試分析</button>
             </div>
         </div>
 
@@ -751,6 +752,7 @@
         function showPreview() {
             const cameraPlaceholder = document.getElementById('cameraPlaceholder');
             const previewContainer = document.getElementById('previewContainer');
+            const testBtn = document.getElementById('testAnalysisBtn');
             
             if (cameraPlaceholder) {
                 cameraPlaceholder.style.display = 'none';
@@ -762,6 +764,20 @@
                     📷 ${imageMetadata.name} | 📏 ${imageMetadata.dimensions} | 💾 ${imageMetadata.size}
                 </div>
             `;
+            
+            // 顯示測試按鈕
+            if (testBtn) {
+                testBtn.style.display = 'block';
+            }
+        }
+
+        function testAnalysis() {
+            console.log('手動觸發分析');
+            if (currentImage) {
+                analyzePills();
+            } else {
+                alert('沒有照片可以分析');
+            }
         }
 
         async function startCamera() {
@@ -889,95 +905,33 @@
                                     },
                                     {
                                         type: "text",
-                                        text: `你是專業醫療器材計數專家。你的首要任務是**精確計算數量**，絕對不能多算或少算。
+                                        text: `你是專業計數專家。請數圖片中綠色和紫色針頭的數量。
 
-**最高優先級：準確計數**
-- 寧可多花時間仔細數，也不要急著回答
-- 每個針頭都要計入，一個都不能漏
-- 重複檢查至少兩次確保準確
+**針頭特徵：**
+- 綠色塑膠頭蓋 = 綠色針頭
+- 紫色塑膠頭蓋 = 紫色針頭
+- 圓柱形，長約 2-4cm
 
-**針頭識別（這是針筒針頭，不是藥物）：**
+**計數步驟：**
+1. 數所有綠色頭蓋
+2. 數所有紫色頭蓋
+3. 總數 = 綠色 + 紫色
 
-🎯 **綠色針頭的特徵：**
-- 綠色的塑膠頭蓋（淡綠、翠綠、深綠都算）
-- 圓柱形或圓錐形
-- 長度約 2-4 公分
-- 底部有圓形基座
-- **每看到一個綠色頭蓋 = 計數 +1**
+**注意：**
+- 仔細數，不要遺漏
+- 重疊的也要分開數
+- 邊緣的也要計入
 
-🎯 **紫色針頭的特徵：**
-- 紫色的塑膠頭蓋（淡紫、深紫、薰衣草色都算）
-- 圓柱形或圓錐形
-- 長度約 2-4 公分
-- 底部有圓形基座
-- **每看到一個紫色頭蓋 = 計數 +1**
-
-**精確計數方法（必須遵守）：**
-
-第一遍：從左到右、從上到下掃描
-- 標記每個綠色頭蓋的位置
-- 標記每個紫色頭蓋的位置
-- 記錄暫時總數
-
-第二遍：重新檢查
-- 再次掃描整張圖片
-- 確認是否有遺漏
-- 確認是否有重複計算
-- 修正總數
-
-第三遍：最終確認
-- 綠色數量對嗎？
-- 紫色數量對嗎？
-- 總數 = 綠色 + 紫色 是否正確？
-
-**常見錯誤（必須避免）：**
-❌ 把透明針筒當作針頭
-❌ 把兩個重疊的針頭算成一個
-❌ 漏掉畫面邊緣的針頭
-❌ 把背景物品誤認為針頭
-❌ 草率計數，沒有仔細檢查
-
-**位置標記要求：**
-- 為每個針頭標記精確位置
-- x: 0-100（左到右百分比）
-- y: 0-100（上到下百分比）
-- color: "green" 或 "purple"
-- **位置數量必須等於計數總數**
-
-**自我檢查清單：**
-在回應前，問自己：
-□ 我真的仔細數過每一個了嗎？
-□ 綠色數量確定正確嗎？
-□ 紫色數量確定正確嗎？
-□ 位置標記數量 = 總數嗎？
-□ 有沒有遺漏邊緣的針頭？
-
-**回應格式（只要 JSON）：**
+回應格式（純 JSON，無其他文字）：
 {
-  "total_count": 總數（必須準確）,
-  "green_count": 綠色針頭數量（逐一計算）,
-  "purple_count": 紫色針頭數量（逐一計算）,
-  "positions": [
-    {"x": 15.2, "y": 23.5, "color": "green"},
-    {"x": 28.7, "y": 31.2, "color": "green"},
-    {"x": 42.1, "y": 28.9, "color": "purple"}
-  ],
+  "total_count": 數字,
+  "green_count": 數字,
+  "purple_count": 數字,
   "categories": [
-    {
-      "type": "綠色針頭 28G",
-      "count": 綠色確切數量,
-      "description": "綠色塑膠頭蓋"
-    },
-    {
-      "type": "紫色針頭 28G",
-      "count": 紫色確切數量,
-      "description": "紫色塑膠頭蓋"
-    }
-  ],
-  "verification": "我已經仔細檢查三遍，確認數量正確"
-}
-
-**記住：準確度比速度重要一萬倍！**`
+    {"type": "綠色針頭", "count": 數字},
+    {"type": "紫色針頭", "count": 數字}
+  ]
+}`
                                     }
                                 ]
                             }
@@ -1035,21 +989,9 @@
                     throw new Error('辨識結果格式錯誤');
                 }
 
-                // 驗證數量一致性
-                if (result.positions && result.positions.length !== result.total_count) {
-                    console.warn('警告：位置數量與總數不符');
-                    console.warn('總數:', result.total_count, '位置數:', result.positions.length);
-                    // 以 positions 的實際數量為準
-                    result.total_count = result.positions.length;
-                    
-                    // 重新計算綠色和紫色
-                    const greenPos = result.positions.filter(p => p.color === 'green').length;
-                    const purplePos = result.positions.filter(p => p.color === 'purple').length;
-                    result.green_count = greenPos;
-                    result.purple_count = purplePos;
-                    
-                    console.log('已修正：綠色', greenPos, '紫色', purplePos, '總計', result.total_count);
-                }
+                // 補充缺失的欄位
+                if (!result.green_count) result.green_count = 0;
+                if (!result.purple_count) result.purple_count = 0;
 
                 console.log('最終結果:', result);
                 displayResults(result);
@@ -1112,7 +1054,7 @@
                 totalCountLarge.textContent = result.total_count;
             }
 
-            // 在圖片上添加綠點標記
+            // 在圖片上添加標記（如果有位置信息）
             if (result.positions && result.positions.length > 0) {
                 setTimeout(() => {
                     const img = previewContainer.querySelector('.preview-image');
@@ -1122,6 +1064,8 @@
                         img.onload = () => addPillMarkers(img, result.positions);
                     }
                 }, 100);
+            } else {
+                console.log('無位置信息，跳過標記點顯示');
             }
 
             // 顯示信心度
@@ -1249,13 +1193,16 @@
             const previewContainer = document.getElementById('previewContainer');
             const resultSection = document.getElementById('resultSection');
             const videoContainer = document.getElementById('videoContainer');
+            const testBtn = document.getElementById('testAnalysisBtn');
             
-            cameraPlaceholder.style.display = 'flex';
+            if (cameraPlaceholder) cameraPlaceholder.style.display = 'flex';
             previewContainer.innerHTML = '';
             resultSection.classList.remove('show');
             videoContainer.style.display = 'none';
+            if (testBtn) testBtn.style.display = 'none';
             
-            document.getElementById('fileInput').value = '';
+            const fileInput = document.getElementById('fileInput');
+            if (fileInput) fileInput.value = '';
             
             if (stream) {
                 stream.getTracks().forEach(track => track.stop());
