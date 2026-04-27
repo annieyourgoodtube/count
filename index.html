@@ -226,7 +226,9 @@
 
         .preview-image {
             max-width: 100%;
-            max-height: 400px;
+            max-height: 280px;
+            width: 100%;
+            object-fit: contain;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
             display: block;
@@ -594,9 +596,9 @@
 </head>
 <body>
     <div class="container">
-        <div class="header" style="padding: 10px 15px; margin-bottom: 8px;">
-            <h1 style="margin-bottom: 4px; font-size: 22px; line-height: 1.3;">💉 Let's Count~e ☕</h1>
-            <p class="subtitle" style="margin: 0; font-size: 13px;">智慧辨識針頭顏色，綠紫一拍就知</p>
+        <div class="header" style="padding: 8px 12px; margin-bottom: 6px;">
+            <h1 style="margin-bottom: 3px; font-size: 20px; line-height: 1.2; font-weight: 700;">💉 Let's Count~e ☕</h1>
+            <p class="subtitle" style="margin: 0; font-size: 12px; line-height: 1.3;">智慧辨識針頭顏色，綠紫一拍就知</p>
         </div>
 
         <div class="content-area">
@@ -651,21 +653,21 @@
 
         <div class="result-section" id="resultSection">
             <!-- 直接在照片上方顯示計數 -->
-            <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); padding: 20px; border-radius: 15px 15px 0 0; text-align: center; color: white;">
+            <div style="background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); padding: 15px; border-radius: 12px 12px 0 0; text-align: center; color: white;">
                 <div style="display: flex; justify-content: space-around; align-items: center;">
                     <div>
-                        <div style="font-size: 16px; opacity: 0.9; margin-bottom: 5px;">🟢 綠色</div>
-                        <div id="greenCountDisplay" style="font-size: 48px; font-weight: bold;">0</div>
+                        <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">🟢 綠色</div>
+                        <div id="greenCountDisplay" style="font-size: 38px; font-weight: bold; line-height: 1;">0</div>
                     </div>
-                    <div style="border-left: 2px solid rgba(255,255,255,0.3); height: 70px;"></div>
+                    <div style="border-left: 2px solid rgba(255,255,255,0.3); height: 55px;"></div>
                     <div>
-                        <div style="font-size: 16px; opacity: 0.9; margin-bottom: 5px;">🟣 紫色</div>
-                        <div id="purpleCountDisplay" style="font-size: 48px; font-weight: bold;">0</div>
+                        <div style="font-size: 14px; opacity: 0.9; margin-bottom: 4px;">🟣 紫色</div>
+                        <div id="purpleCountDisplay" style="font-size: 38px; font-weight: bold; line-height: 1;">0</div>
                     </div>
                 </div>
-                <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.2);">
-                    <div style="font-size: 14px; opacity: 0.8;">總計</div>
-                    <div id="totalCount" style="font-size: 32px; font-weight: bold;">0</div>
+                <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.2);">
+                    <div style="font-size: 13px; opacity: 0.8;">總計</div>
+                    <div id="totalCount" style="font-size: 28px; font-weight: bold; line-height: 1;">0</div>
                 </div>
             </div>
             
@@ -799,35 +801,52 @@
 
         function capturePhoto() {
             const video = document.getElementById('video');
+            
+            // 檢查視訊是否準備好
+            if (!video || video.videoWidth === 0 || video.videoHeight === 0) {
+                alert('相機尚未準備好，請稍後再試');
+                return;
+            }
+            
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0);
             
-            currentImage = canvas.toDataURL('image/jpeg', 0.98);
+            currentImage = canvas.toDataURL('image/jpeg', 0.95);
             imageMetadata = {
                 name: '相機拍攝.jpg',
                 dimensions: `${canvas.width} × ${canvas.height} px`,
                 size: ((currentImage.length * 0.75) / 1024).toFixed(2) + ' KB'
             };
             
+            console.log('照片已拍攝:', imageMetadata);
+            
             // 顯示即時計數（初始為0）
             const liveCount = document.getElementById('liveCount');
-            liveCount.style.display = 'block';
+            if (liveCount) {
+                liveCount.style.display = 'block';
+            }
             
             showPreview();
             
-            // 延遲關閉相機，讓使用者看到計數顯示
+            // 關閉相機並開始分析
+            stopCamera();
             setTimeout(() => {
-                stopCamera();
-                // 開始分析
-                setTimeout(() => analyzePills(), 300);
-            }, 500);
+                console.log('開始分析...');
+                analyzePills();
+            }, 300);
         }
 
         async function analyzePills() {
-            if (!currentImage) return;
+            if (!currentImage) {
+                alert('錯誤：沒有圖片可以分析');
+                console.error('currentImage 為空');
+                return;
+            }
+
+            console.log('開始 AI 分析，圖片大小:', currentImage.length, 'bytes');
 
             const loading = document.getElementById('loading');
             const resultSection = document.getElementById('resultSection');
@@ -845,6 +864,8 @@
             }, 200);
 
             try {
+                console.log('發送 API 請求...');
+                
                 const response = await fetch("https://api.anthropic.com/v1/messages", {
                     method: "POST",
                     headers: {
@@ -852,7 +873,7 @@
                     },
                     body: JSON.stringify({
                         model: "claude-sonnet-4-20250514",
-                        max_tokens: 3000,
+                        max_tokens: 4000,
                         temperature: 0,
                         messages: [
                             {
@@ -868,59 +889,95 @@
                                     },
                                     {
                                         type: "text",
-                                        text: `你是專業醫療器材辨識專家。請辨識圖片中針筒針頭的顏色並計數。
+                                        text: `你是專業醫療器材計數專家。你的首要任務是**精確計算數量**，絕對不能多算或少算。
 
-**任務說明：**
-辨識圖片中的針筒針頭，區分綠色和紫色，並分別計數。
+**最高優先級：準確計數**
+- 寧可多花時間仔細數，也不要急著回答
+- 每個針頭都要計入，一個都不能漏
+- 重複檢查至少兩次確保準確
 
-**針頭特徵：**
-- 綠色針頭：淡綠色或深綠色的針筒頭蓋
-- 紫色針頭：淡紫色或深紫色的針筒頭蓋
-- 針頭通常是圓錐形或圓柱形
-- 可能還有針筒本體（透明部分）
+**針頭識別（這是針筒針頭，不是藥物）：**
 
-**辨識重點：**
-1. 專注在針頭的**頭蓋顏色**
-2. 區分綠色 vs 紫色
-3. 計算每種顏色的數量
-4. 標記每個針頭的位置
+🎯 **綠色針頭的特徵：**
+- 綠色的塑膠頭蓋（淡綠、翠綠、深綠都算）
+- 圓柱形或圓錐形
+- 長度約 2-4 公分
+- 底部有圓形基座
+- **每看到一個綠色頭蓋 = 計數 +1**
 
-**忽略的物品：**
-- 針筒的透明筒身
-- 包裝盒或包裝紙
-- 背景物品
-- 標籤文字
+🎯 **紫色針頭的特徵：**
+- 紫色的塑膠頭蓋（淡紫、深紫、薰衣草色都算）
+- 圓柱形或圓錐形
+- 長度約 2-4 公分
+- 底部有圓形基座
+- **每看到一個紫色頭蓋 = 計數 +1**
 
-**位置標記：**
-- x: 0-100（0=最左，100=最右）
-- y: 0-100（0=最上，100=最下）
-- 標記每個針頭頭蓋的中心位置
+**精確計數方法（必須遵守）：**
 
-**預設規格：**
-- 所有針頭預設為 28G（除非圖片中有其他明確標示）
+第一遍：從左到右、從上到下掃描
+- 標記每個綠色頭蓋的位置
+- 標記每個紫色頭蓋的位置
+- 記錄暫時總數
 
-請以JSON格式回應（不要其他文字）：
+第二遍：重新檢查
+- 再次掃描整張圖片
+- 確認是否有遺漏
+- 確認是否有重複計算
+- 修正總數
+
+第三遍：最終確認
+- 綠色數量對嗎？
+- 紫色數量對嗎？
+- 總數 = 綠色 + 紫色 是否正確？
+
+**常見錯誤（必須避免）：**
+❌ 把透明針筒當作針頭
+❌ 把兩個重疊的針頭算成一個
+❌ 漏掉畫面邊緣的針頭
+❌ 把背景物品誤認為針頭
+❌ 草率計數，沒有仔細檢查
+
+**位置標記要求：**
+- 為每個針頭標記精確位置
+- x: 0-100（左到右百分比）
+- y: 0-100（上到下百分比）
+- color: "green" 或 "purple"
+- **位置數量必須等於計數總數**
+
+**自我檢查清單：**
+在回應前，問自己：
+□ 我真的仔細數過每一個了嗎？
+□ 綠色數量確定正確嗎？
+□ 紫色數量確定正確嗎？
+□ 位置標記數量 = 總數嗎？
+□ 有沒有遺漏邊緣的針頭？
+
+**回應格式（只要 JSON）：**
 {
-  "total_count": 針頭總數,
-  "green_count": 綠色針頭數量,
-  "purple_count": 紫色針頭數量,
+  "total_count": 總數（必須準確）,
+  "green_count": 綠色針頭數量（逐一計算）,
+  "purple_count": 紫色針頭數量（逐一計算）,
   "positions": [
-    {"x": 25.5, "y": 30.2, "color": "green"},
-    {"x": 45.0, "y": 50.0, "color": "purple"}
+    {"x": 15.2, "y": 23.5, "color": "green"},
+    {"x": 28.7, "y": 31.2, "color": "green"},
+    {"x": 42.1, "y": 28.9, "color": "purple"}
   ],
   "categories": [
     {
       "type": "綠色針頭 28G",
-      "count": 數量,
-      "description": "淡綠色"
+      "count": 綠色確切數量,
+      "description": "綠色塑膠頭蓋"
     },
     {
       "type": "紫色針頭 28G",
-      "count": 數量,
-      "description": "淡紫色"
+      "count": 紫色確切數量,
+      "description": "紫色塑膠頭蓋"
     }
-  ]
-}`
+  ],
+  "verification": "我已經仔細檢查三遍，確認數量正確"
+}
+
+**記住：準確度比速度重要一萬倍！**`
                                     }
                                 ]
                             }
@@ -931,17 +988,23 @@
                 clearInterval(progressInterval);
                 progressFill.style.width = '100%';
 
+                console.log('API 回應狀態:', response.status);
+
                 if (!response.ok) {
-                    throw new Error(`API 回應錯誤: ${response.status} ${response.statusText}`);
+                    const errorText = await response.text();
+                    console.error('API 錯誤回應:', errorText);
+                    throw new Error(`API 錯誤 ${response.status}: ${errorText.substring(0, 200)}`);
                 }
 
                 const data = await response.json();
+                console.log('API 回應數據:', data);
                 
                 if (!data.content || data.content.length === 0) {
                     throw new Error('API 未返回有效內容');
                 }
 
                 const text = data.content.map(item => item.text || "").join("\n").trim();
+                console.log('AI 文字回應:', text.substring(0, 500));
                 
                 if (!text) {
                     throw new Error('AI 回應內容為空');
@@ -949,21 +1012,46 @@
 
                 // 清理JSON格式
                 let cleanText = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+                console.log('清理後的 JSON:', cleanText.substring(0, 300));
                 
                 // 嘗試解析JSON
                 let result;
                 try {
                     result = JSON.parse(cleanText);
+                    console.log('解析成功:', result);
                 } catch (parseError) {
-                    console.error('JSON 解析錯誤:', cleanText);
-                    throw new Error('無法解析 AI 回應，請重試');
+                    console.error('JSON 解析失敗');
+                    console.error('原始文字:', text);
+                    console.error('清理後:', cleanText);
+                    
+                    alert('❌ AI 回應格式錯誤\n\n請重新拍攝，確保：\n• 光線充足\n• 針頭清晰\n• 背景簡潔\n\n原始回應:\n' + text.substring(0, 300));
+                    throw parseError;
                 }
 
                 // 驗證結果
-                if (!result.total_count && result.total_count !== 0) {
+                if (result.total_count === undefined || result.total_count === null) {
+                    console.error('結果格式錯誤:', result);
+                    alert('❌ AI 未返回有效的計數結果\n\n請重新拍攝');
                     throw new Error('辨識結果格式錯誤');
                 }
 
+                // 驗證數量一致性
+                if (result.positions && result.positions.length !== result.total_count) {
+                    console.warn('警告：位置數量與總數不符');
+                    console.warn('總數:', result.total_count, '位置數:', result.positions.length);
+                    // 以 positions 的實際數量為準
+                    result.total_count = result.positions.length;
+                    
+                    // 重新計算綠色和紫色
+                    const greenPos = result.positions.filter(p => p.color === 'green').length;
+                    const purplePos = result.positions.filter(p => p.color === 'purple').length;
+                    result.green_count = greenPos;
+                    result.purple_count = purplePos;
+                    
+                    console.log('已修正：綠色', greenPos, '紫色', purplePos, '總計', result.total_count);
+                }
+
+                console.log('最終結果:', result);
                 displayResults(result);
                 
             } catch (error) {
