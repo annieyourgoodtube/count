@@ -1,239 +1,188 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>針頭計數器 - 簡化版</title>
+    <title>針頭計數 - 極簡版</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            padding: 15px;
-            background: #f5f5f5;
-        }
-        .container {
-            max-width: 600px;
+        body { 
+            font-family: Arial; 
+            padding: 20px; 
+            max-width: 600px; 
             margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-        }
-        h1 {
-            text-align: center;
-            color: #1e3c72;
-            margin-bottom: 20px;
-            font-size: 24px;
         }
         button {
             width: 100%;
             padding: 15px;
             margin: 10px 0;
-            font-size: 18px;
+            font-size: 16px;
+            border-radius: 8px;
             border: none;
-            border-radius: 8px;
             cursor: pointer;
-            font-weight: bold;
         }
-        .btn-camera {
-            background: #1e3c72;
-            color: white;
-        }
-        .btn-analyze {
-            background: #10b981;
-            color: white;
-        }
-        .btn-reset {
-            background: #666;
-            color: white;
-        }
-        video {
-            width: 100%;
+        .blue { background: #1e3c72; color: white; }
+        .green { background: #10b981; color: white; }
+        .gray { background: #666; color: white; }
+        img, video { 
+            width: 100%; 
+            max-height: 400px;
+            object-fit: contain;
             border-radius: 8px;
             margin: 10px 0;
         }
-        img {
-            width: 100%;
-            border-radius: 8px;
+        .log {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 5px;
             margin: 10px 0;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
         }
         .result {
             background: #1e3c72;
             color: white;
             padding: 20px;
             border-radius: 8px;
-            margin: 20px 0;
             text-align: center;
+            margin: 20px 0;
         }
-        .result-number {
-            font-size: 48px;
-            font-weight: bold;
-        }
-        .status {
-            background: #fffbeb;
-            border: 2px solid #f59e0b;
-            padding: 15px;
-            border-radius: 8px;
-            margin: 10px 0;
-        }
+        .big { font-size: 48px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>💉 針頭計數器 - 測試版</h1>
-        
-        <div id="status" class="status" style="display: none;"></div>
-        
-        <button class="btn-camera" onclick="startCamera()">📷 開啟相機</button>
-        
-        <video id="video" autoplay playsinline style="display: none;"></video>
-        
-        <button id="captureBtn" class="btn-camera" onclick="capturePhoto()" style="display: none;">📸 拍照</button>
-        
-        <img id="preview" style="display: none;">
-        
-        <button id="analyzeBtn" class="btn-analyze" onclick="analyze()" style="display: none;">🔍 開始分析</button>
-        
-        <div id="result" class="result" style="display: none;">
-            <div>🟢 綠色: <span id="green">0</span></div>
-            <div>🟣 紫色: <span id="purple">0</span></div>
-            <div class="result-number">總計: <span id="total">0</span></div>
-        </div>
-        
-        <button class="btn-reset" onclick="reset()">🔄 重新開始</button>
+    <h1>💉 針頭計數器</h1>
+    
+    <div class="log" id="log">準備就緒...</div>
+    
+    <button class="blue" onclick="start()">1️⃣ 開啟相機</button>
+    <video id="video" autoplay playsinline style="display:none"></video>
+    
+    <button class="blue" id="btn2" onclick="capture()" style="display:none">2️⃣ 拍照</button>
+    <img id="photo" style="display:none">
+    
+    <button class="green" id="btn3" onclick="analyze()" style="display:none">3️⃣ AI 分析</button>
+    
+    <div id="result" class="result" style="display:none">
+        <div>🟢 綠色: <span id="g">0</span></div>
+        <div>🟣 紫色: <span id="p">0</span></div>
+        <div class="big">總: <span id="t">0</span></div>
     </div>
+    
+    <button class="gray" onclick="location.reload()">🔄 重新開始</button>
 
     <script>
-        let stream = null;
-        let currentImage = null;
-
-        function showStatus(msg) {
-            const status = document.getElementById('status');
-            status.textContent = msg;
-            status.style.display = 'block';
+        let stream, img;
+        
+        function log(msg) {
+            const d = new Date();
+            const time = d.getHours() + ':' + d.getMinutes() + ':' + d.getSeconds();
+            document.getElementById('log').innerHTML += `<div>[${time}] ${msg}</div>`;
+            console.log(msg);
         }
 
-        async function startCamera() {
-            showStatus('正在開啟相機...');
+        async function start() {
+            log('正在請求相機權限...');
             try {
                 stream = await navigator.mediaDevices.getUserMedia({ 
                     video: { facingMode: 'environment' } 
                 });
-                const video = document.getElementById('video');
-                video.srcObject = stream;
-                video.style.display = 'block';
-                document.getElementById('captureBtn').style.display = 'block';
-                showStatus('✅ 相機已開啟');
-            } catch (err) {
-                alert('無法開啟相機: ' + err.message);
+                document.getElementById('video').srcObject = stream;
+                document.getElementById('video').style.display = 'block';
+                document.getElementById('btn2').style.display = 'block';
+                log('✅ 相機已開啟');
+            } catch (e) {
+                log('❌ 相機錯誤: ' + e.message);
+                alert('無法開啟相機: ' + e.message);
             }
         }
 
-        function capturePhoto() {
-            showStatus('正在拍照...');
+        function capture() {
+            log('正在拍照...');
             const video = document.getElementById('video');
             const canvas = document.createElement('canvas');
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(video, 0, 0);
+            canvas.getContext('2d').drawImage(video, 0, 0);
             
-            currentImage = canvas.toDataURL('image/jpeg', 0.9);
-            
-            // 關閉相機
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-                video.style.display = 'none';
-                document.getElementById('captureBtn').style.display = 'none';
-            }
+            img = canvas.toDataURL('image/jpeg', 0.9);
+            log('✅ 照片大小: ' + Math.round(img.length/1024) + ' KB');
             
             // 顯示照片
-            const preview = document.getElementById('preview');
-            preview.src = currentImage;
-            preview.style.display = 'block';
+            document.getElementById('photo').src = img;
+            document.getElementById('photo').style.display = 'block';
+            
+            // 關閉相機
+            stream.getTracks().forEach(t => t.stop());
+            document.getElementById('video').style.display = 'none';
+            document.getElementById('btn2').style.display = 'none';
             
             // 顯示分析按鈕
-            document.getElementById('analyzeBtn').style.display = 'block';
-            
-            showStatus('✅ 照片已拍攝，點擊「開始分析」');
+            document.getElementById('btn3').style.display = 'block';
+            log('✅ 準備分析，請點擊「AI 分析」');
         }
 
         async function analyze() {
-            if (!currentImage) {
+            if (!img) {
                 alert('沒有照片');
                 return;
             }
 
-            showStatus('🔍 AI 正在分析中...');
-            document.getElementById('analyzeBtn').disabled = true;
+            log('開始 AI 分析...');
+            document.getElementById('btn3').disabled = true;
 
             try {
-                const imageData = currentImage.split(',')[1];
-
-                const response = await fetch("https://api.anthropic.com/v1/messages", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
+                log('準備圖片數據...');
+                const base64 = img.split(',')[1];
+                
+                log('發送 API 請求...');
+                const response = await fetch('https://api.anthropic.com/v1/messages', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        model: "claude-sonnet-4-20250514",
-                        max_tokens: 1000,
+                        model: 'claude-sonnet-4-20250514',
+                        max_tokens: 800,
                         messages: [{
-                            role: "user",
+                            role: 'user',
                             content: [{
-                                type: "image",
-                                source: {
-                                    type: "base64",
-                                    media_type: "image/jpeg",
-                                    data: imageData
-                                }
+                                type: 'image',
+                                source: { type: 'base64', media_type: 'image/jpeg', data: base64 }
                             }, {
-                                type: "text",
-                                text: "數圖片中綠色和紫色針頭。回應JSON: {\"total_count\":數字,\"green_count\":數字,\"purple_count\":數字}"
+                                type: 'text',
+                                text: '數圖中綠色和紫色針頭數量。回應JSON: {"total":數字,"green":數字,"purple":數字}'
                             }]
                         }]
                     })
                 });
 
+                log('API 狀態: ' + response.status);
+
                 if (!response.ok) {
-                    throw new Error('API 錯誤: ' + response.status);
+                    const err = await response.text();
+                    throw new Error('API錯誤 ' + response.status + ': ' + err.substring(0, 100));
                 }
 
                 const data = await response.json();
-                const text = data.content[0].text;
-                const cleanText = text.replace(/```json|```/g, '').trim();
-                const result = JSON.parse(cleanText);
+                log('收到回應');
 
-                // 顯示結果
-                document.getElementById('green').textContent = result.green_count || 0;
-                document.getElementById('purple').textContent = result.purple_count || 0;
-                document.getElementById('total').textContent = result.total_count || 0;
+                const text = data.content[0].text.replace(/```json|```/g, '').trim();
+                log('AI回應: ' + text.substring(0, 100));
+                
+                const r = JSON.parse(text);
+                
+                document.getElementById('g').textContent = r.green || 0;
+                document.getElementById('p').textContent = r.purple || 0;
+                document.getElementById('t').textContent = r.total || 0;
                 document.getElementById('result').style.display = 'block';
+                
+                log('✅ 分析完成！總數: ' + (r.total || 0));
 
-                showStatus('✅ 分析完成！');
-
-            } catch (error) {
-                alert('分析失敗: ' + error.message);
-                showStatus('❌ 分析失敗: ' + error.message);
+            } catch (e) {
+                log('❌ 錯誤: ' + e.message);
+                alert('分析失敗:\n' + e.message);
             } finally {
-                document.getElementById('analyzeBtn').disabled = false;
+                document.getElementById('btn3').disabled = false;
             }
-        }
-
-        function reset() {
-            currentImage = null;
-            if (stream) {
-                stream.getTracks().forEach(track => track.stop());
-            }
-            document.getElementById('video').style.display = 'none';
-            document.getElementById('preview').style.display = 'none';
-            document.getElementById('captureBtn').style.display = 'none';
-            document.getElementById('analyzeBtn').style.display = 'none';
-            document.getElementById('result').style.display = 'none';
-            document.getElementById('status').style.display = 'none';
         }
     </script>
 </body>
